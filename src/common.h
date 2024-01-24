@@ -29,7 +29,6 @@ typedef struct HashMap {
 } HashMap;
 
 void resizeHashMap(HashMap *hm, int size);
-
 int hash_generator(const char *string, const int hashKey, const int size);
 int get_hash(const char *string, const int size, const int attempt);
 

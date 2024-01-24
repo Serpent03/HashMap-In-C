@@ -1,5 +1,6 @@
 #include "common.h"
 #include <math.h>
+#include <string.h>
 // all non-public functions are stored here
 
 // the primes can only be something bigger than the size
@@ -53,7 +54,7 @@ void deleteKVPair(KVPair *kvp) {
 
 HashMap* newHashMap() {
   HashMap *hm = (HashMap*)malloc(1 * sizeof(HashMap));
-  hm->size = 53; 
+  hm->size = 4; 
   hm->count = 0;
   hm->load = 0.0f;
   hm->items = (KVPair**)calloc((size_t)hm->size, sizeof(KVPair*));
@@ -74,7 +75,32 @@ void deleteHashMap(HashMap *hm) {
 }
 
 void resizeHashMap(HashMap *hm, int size) {
-  
+  int oldSize = hm->size;
+  KVPair **old_items = (KVPair**)calloc((size_t)oldSize, sizeof(KVPair*));
+
+  for (int i = 0; i < oldSize; i++) {
+    if (hm->items[i] != NULL && !hm->items[i]->isDeleted) {
+      old_items[i] = newKVpair(hm->items[i]->key, hm->items[i]->value);
+      printf("Resized: %s -> %s @ %d\n", hm->items[i]->key, hm->items[i]->value, i);
+    }
+  }
+
+  hm->size = size;
+  hm->load = (float)hm->count / (float)hm->size;
+  hm->items = (KVPair**)calloc((size_t)hm->size, sizeof(KVPair*));
+
+  for (int i = 0; i < oldSize; i++) {
+    if (old_items[i] != NULL && !old_items[i]->isDeleted) {
+      hm->items[i] = newKVpair(old_items[i]->key, old_items[i]->value);
+    }
+  }
+
+  // for (int i = 0; i < oldSize; i++) {
+  //   if (old_items[i] != NULL) { 
+  //     deleteKVPair(old_items[i]);
+  //   }
+  // }
+  // free(old_items);
 }
 
 int hash_generator(const char *string, const int hashKey, const int size) {
@@ -82,9 +108,8 @@ int hash_generator(const char *string, const int hashKey, const int size) {
   const int len = strlen(string);
   for (int i = 0; i < len; i++) {
     hash += (long)pow(hashKey, len - (i+1)) * string[i];
-    hash = hash % size; 
   }
-  return hash;
+  return (int)hash % size;
 }
 
 // this deals with hashkey collisions. try combinations of two hash_generators
@@ -95,11 +120,11 @@ int get_hash(const char *string, const int size, const int attempt) {
   return hash_a + (attempt * (hash_b + 1)) % size;
 }
 
-// TODO automatically resizing the items KVPair array
 void insertIntoHM(HashMap *a, char *k, char *v) {
-  if (a->load > 0.7) {
+  if (a->load >= 0.7) {
     int newSize = getNextPrime(a->size * 2);
     resizeHashMap(a, newSize);
+    printf("RESIZE_PASSED\n");
   }
 
   KVPair *kvp = newKVpair(k, v); 
@@ -115,6 +140,7 @@ void insertIntoHM(HashMap *a, char *k, char *v) {
   while (current != NULL) {
     if (strcmp(current->key, k) == 0) {
       current->isDeleted = true;
+      a->count--; // reduce the count here. we're gonna increment it later.
     }
     if (current->isDeleted) {
       break;
@@ -128,14 +154,17 @@ void insertIntoHM(HashMap *a, char *k, char *v) {
   // this only changes things if the key-value pair was 'deleted' previously
   a->count++;
   a->load = (float)a->count / (float)a->size;
+  printf("%d :: %f\n", a->size, a->load);
 }
 
+// TODO fix resizing search key loss
 char* searchInHM(HashMap *a, char *k) {
   int index = get_hash(k, a->size, 0);
   KVPair *current = a->items[index];
   int attempt = 1;
 
   while (current != NULL) {
+    printf("Search @ %d\n", index);
     if (!current->isDeleted && strcmp(k, current->key) == 0) {
       return current->value;
     }
@@ -162,6 +191,7 @@ void deleteFromHM(HashMap *a, char *k) {
       // deleteKVPair(current);
       current->isDeleted = true;
       a->count--;
+      a->load = (float)a->count / (float)a->size;
     }
     index = get_hash(k, a->size, attempt);
     current = a->items[index];
