@@ -1,5 +1,13 @@
 #include "common.h"
 
 int main() {
-  printf("%d\n", get_hash("hi there buddy?", 53, 0));
+  HashMap *hm = newHashMap();
+  insertIntoHM(hm, "key", "string");
+
+  char *result = searchInHM(hm, "key");
+  printf("%s\n", result == NULL ? "NOPE" : result);
+
+  insertIntoHM(hm, "key", "updated string");
+  result = searchInHM(hm, "key");
+  printf("%s\n", result == NULL ? "NOPE" : result);
 }

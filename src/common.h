@@ -11,17 +11,17 @@
 typedef struct KeyValuePair {
   char *key;
   char *value;
+  bool isDeleted;
 } KVPair;
 
 // why exactly is this static?
-static KVPair* newKVpair(const char *k, const char *s); 
+static KVPair* newKVpair(const char *k, const char *v); 
 void deleteKVPair(KVPair* kvp);
 
 typedef struct HashMap {
   KVPair **items;
   int size;
   int count;
-  // TODO resizing the hashmap dynamically
 } HashMap;
 
 int hash_generator(const char *string, const int hashKey, const int size);
