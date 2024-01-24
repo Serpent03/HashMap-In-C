@@ -47,6 +47,9 @@ static KVPair* newKVpair(const char *k, const char *v) {
 }
 
 void deleteKVPair(KVPair *kvp) {
+  if (kvp == NULL) {
+    return;
+  }
   free(kvp->key);
   free(kvp->value);
   free(kvp);
@@ -81,7 +84,6 @@ void resizeHashMap(HashMap *hm, int size) {
   for (int i = 0; i < oldSize; i++) {
     if (hm->items[i] != NULL && !hm->items[i]->isDeleted) {
       old_items[i] = newKVpair(hm->items[i]->key, hm->items[i]->value);
-      printf("Resized: %s -> %s @ %d\n", hm->items[i]->key, hm->items[i]->value, i);
     }
   }
 
@@ -89,18 +91,16 @@ void resizeHashMap(HashMap *hm, int size) {
   hm->load = (float)hm->count / (float)hm->size;
   hm->items = (KVPair**)calloc((size_t)hm->size, sizeof(KVPair*));
 
+  printf("REHASHING KEYS\n");
   for (int i = 0; i < oldSize; i++) {
     if (old_items[i] != NULL && !old_items[i]->isDeleted) {
-      hm->items[i] = newKVpair(old_items[i]->key, old_items[i]->value);
+      insertIntoHM(hm, old_items[i]->key, old_items[i]->value);
     }
   }
-
-  // for (int i = 0; i < oldSize; i++) {
-  //   if (old_items[i] != NULL) { 
-  //     deleteKVPair(old_items[i]);
-  //   }
-  // }
-  // free(old_items);
+  for (int i = 0; i < oldSize; i++) {
+    deleteKVPair(old_items[i]);
+  }
+  free(old_items);
 }
 
 int hash_generator(const char *string, const int hashKey, const int size) {
@@ -124,7 +124,6 @@ void insertIntoHM(HashMap *a, char *k, char *v) {
   if (a->load >= 0.7) {
     int newSize = getNextPrime(a->size * 2);
     resizeHashMap(a, newSize);
-    printf("RESIZE_PASSED\n");
   }
 
   KVPair *kvp = newKVpair(k, v); 
@@ -152,9 +151,10 @@ void insertIntoHM(HashMap *a, char *k, char *v) {
   a->items[index] = kvp;  
   a->items[index]->isDeleted = false; 
   // this only changes things if the key-value pair was 'deleted' previously
+
   a->count++;
   a->load = (float)a->count / (float)a->size;
-  printf("%d :: %f\n", a->size, a->load);
+  // printf("Hash (%s): (%s) @ %d\n", kvp->key, kvp->value, index);
 }
 
 // TODO fix resizing search key loss
@@ -188,7 +188,6 @@ void deleteFromHM(HashMap *a, char *k) {
 
   while (current != NULL) {
     if (!current->isDeleted && strcmp(k, current->key) == 0) {
-      // deleteKVPair(current);
       current->isDeleted = true;
       a->count--;
       a->load = (float)a->count / (float)a->size;
